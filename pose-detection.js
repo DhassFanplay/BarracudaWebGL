@@ -2,7 +2,7 @@ const poseDetection = window.poseDetection;
 
 let detector = null;
 let video = null;
-const debugLog=null;
+let debugLog=null;
 
 async function initPoseDetection() {
     debugLog = document.getElementById("debugLog")
