@@ -1,5 +1,3 @@
-// pose-detection.js
-
 const poseDetection = window.poseDetection;
 
 let detector = null;
@@ -7,20 +5,30 @@ let video = null;
 const debugLog = document.getElementById("debugLog");
 
 async function initPoseDetection() {
-    await tf.setBackend('webgl');
-    detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet);
-    debugLog.innerText = "✅ Detector ready. Accessing camera...";
+    try {
+        await tf.setBackend('webgl');
+        await tf.ready();
 
-    video = document.createElement("video");
-    video.style.display = "none";
-    document.body.appendChild(video);
+        detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet);
+        debugLog.innerText = "✅ Detector ready. Accessing camera...";
 
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-    video.srcObject = stream;
-    await video.play();
+        video = document.createElement("video");
+        video.setAttribute("autoplay", true);
+        video.setAttribute("playsinline", true); // ✅ Needed for iOS
+        video.style.display = "none";
+        document.body.appendChild(video);
 
-    debugLog.innerText = "🎥 Camera ready. Detecting pose...";
-    detectPose();
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        video.srcObject = stream;
+        await video.play();
+
+        debugLog.innerText = "🎥 Camera ready. Detecting pose...";
+        detectPose();
+
+    } catch (error) {
+        debugLog.innerText = `❌ Pose setup error: ${error.message}`;
+        console.error(error);
+    }
 }
 
 async function detectPose() {
@@ -32,8 +40,8 @@ async function detectPose() {
         const leftAnkle = keypoints.find(k => k.name === "left_ankle");
         const rightAnkle = keypoints.find(k => k.name === "right_ankle");
 
-        if (leftAnkle && leftAnkle.score > 0.5) sendToUnity(leftAnkle.x, leftAnkle.y, "LeftAnkle");
-        if (rightAnkle && rightAnkle.score > 0.5) sendToUnity(rightAnkle.x, rightAnkle.y, "RightAnkle");
+        if (leftAnkle?.score > 0.5) sendToUnity(leftAnkle.x, leftAnkle.y, "LeftAnkle");
+        if (rightAnkle?.score > 0.5) sendToUnity(rightAnkle.x, rightAnkle.y, "RightAnkle");
     }
 
     requestAnimationFrame(detectPose);
@@ -45,11 +53,10 @@ function sendToUnity(x, y, label) {
         window.unityInstance.SendMessage("KeypointReceiver", "OnKeypointsReceived", data);
         debugLog.innerText = `📤 Sent ${label}: (${x.toFixed(1)}, ${y.toFixed(1)})`;
     } else {
-        debugLog.innerText = `⚠️ Waiting for Unity...`;
+        debugLog.innerText = `⚠️ Unity not ready yet`;
     }
 }
 
-// Called by Unity after WebGL is ready
 window.RegisterUnityInstance = function (instance) {
     window.unityInstance = instance;
     initPoseDetection();
