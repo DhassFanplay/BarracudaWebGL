@@ -1,7 +1,6 @@
 // pose-detection.js
 
-import * as poseDetection from "https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection";
-import '@tensorflow/tfjs-backend-webgl';
+const poseDetection = window.poseDetection;
 
 let detector = null;
 let video = null;
