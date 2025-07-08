@@ -2,62 +2,68 @@ const poseDetection = window.poseDetection;
 
 let detector = null;
 let video = null;
-let debugLog=null;
+let debugLog = null;
 
 async function initPoseDetection() {
-    debugLog = document.getElementById("debugLog")
-    try {
-        await tf.setBackend('webgl');
-        await tf.ready();
+    debugLog = document.getElementById("debugLog");
+    if (!debugLog) {
+        console.warn("❌ debugLog element not found in DOM.");
+    }
 
+    try {
+        logDebug("⚙️ Initializing TensorFlow backend...");
+        await tf.setBackend('webgl');
+
+        logDebug("🔍 Loading MoveNet pose detector...");
         detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet);
-        debugLog.innerText = "✅ Detector ready. Accessing camera...";
+        logDebug("✅ Detector ready. Accessing camera...");
 
         video = document.createElement("video");
-        video.setAttribute("autoplay", true);
-        video.setAttribute("playsinline", true); // ✅ Needed for iOS
         video.style.display = "none";
         document.body.appendChild(video);
 
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" }
+        });
         video.srcObject = stream;
         await video.play();
 
-        debugLog.innerText = "🎥 Camera ready. Detecting pose...";
+        logDebug("🎥 Camera ready. Starting hand detection...");
         detectPose();
-
-    } catch (error) {
-        // debugLog.innerText = `❌ Pose setup error: ${error.message}`;
-        // console.error(error);
+    } catch (err) {
+        console.error("❌ Pose detection initialization failed:", err);
+        logDebug(`❌ Error: ${err.message}`);
     }
 }
 
-// async function detectPose() {
-//     if (!detector || !video) return;
-
-//     const poses = await detector.estimatePoses(video);
-//     if (poses.length > 0) {
-//         const keypoints = poses[0].keypoints;
-//         const leftAnkle = keypoints.find(k => k.name === "left_ankle");
-//         const rightAnkle = keypoints.find(k => k.name === "right_ankle");
-
-//         if (leftAnkle?.score > 0.5) sendToUnity(leftAnkle.x, leftAnkle.y, "LeftAnkle");
-//         if (rightAnkle?.score > 0.5) sendToUnity(rightAnkle.x, rightAnkle.y, "RightAnkle");
-//     }
-
-//     requestAnimationFrame(detectPose);
-// }
 async function detectPose() {
     if (!detector || !video) return;
 
     const poses = await detector.estimatePoses(video);
     if (poses.length > 0) {
         const keypoints = poses[0].keypoints;
+
         const leftWrist = keypoints.find(k => k.name === "left_wrist");
         const rightWrist = keypoints.find(k => k.name === "right_wrist");
 
-        if (leftWrist && leftWrist.score > 0.5) sendToUnity(leftWrist.x, leftWrist.y, "LeftWrist");
-        if (rightWrist && rightWrist.score > 0.5) sendToUnity(rightWrist.x, rightWrist.y, "RightWrist");
+        if (leftWrist && leftWrist.score > 0.5) {
+            logDebug(`🖐️ LeftWrist: (${leftWrist.x.toFixed(1)}, ${leftWrist.y.toFixed(1)})`);
+            sendToUnity(leftWrist.x, leftWrist.y, "LeftWrist");
+        }
+
+        if (rightWrist && rightWrist.score > 0.5) {
+            logDebug(`🖐️ RightWrist: (${rightWrist.x.toFixed(1)}, ${rightWrist.y.toFixed(1)})`);
+            sendToUnity(rightWrist.x, rightWrist.y, "RightWrist");
+        }
+
+        if (
+            (!leftWrist || leftWrist.score <= 0.5) &&
+            (!rightWrist || rightWrist.score <= 0.5)
+        ) {
+            logDebug("❌ No confident wrist keypoints detected.");
+        }
+    } else {
+        logDebug("👀 No poses detected.");
     }
 
     requestAnimationFrame(detectPose);
@@ -67,12 +73,20 @@ function sendToUnity(x, y, label) {
     const data = JSON.stringify({ x, y, label });
     if (window.unityInstance) {
         window.unityInstance.SendMessage("KeypointReceiver", "OnKeypointsReceived", data);
-        debugLog.innerText = `📤 Sent ${label}: (${x.toFixed(1)}, ${y.toFixed(1)})`;
+        console.log(`📤 Sent to Unity: ${label} (${x.toFixed(1)}, ${y.toFixed(1)})`);
+        logDebug(`📤 Sent to Unity: ${label} (${x.toFixed(1)}, ${y.toFixed(1)})`);
     } else {
-        debugLog.innerText = `⚠️ Unity not ready yet`;
+        console.warn(`⚠️ Unity instance not ready. Skipping send for ${label}`);
+        logDebug(`⚠️ Unity not ready. Skipped ${label}`);
     }
 }
 
+function logDebug(message) {
+    if (debugLog) debugLog.innerText = message;
+    console.log(message);
+}
+
+// Called by Unity after WebGL is ready
 window.RegisterUnityInstance = function (instance) {
     window.unityInstance = instance;
     initPoseDetection();
