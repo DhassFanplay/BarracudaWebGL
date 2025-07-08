@@ -2,9 +2,10 @@ const poseDetection = window.poseDetection;
 
 let detector = null;
 let video = null;
-const debugLog = document.getElementById("debugLog");
+const debugLog=null;
 
 async function initPoseDetection() {
+    debugLog = document.getElementById("debugLog")
     try {
         await tf.setBackend('webgl');
         await tf.ready();
