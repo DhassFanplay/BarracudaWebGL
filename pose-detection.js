@@ -26,8 +26,8 @@ async function initPoseDetection() {
         detectPose();
 
     } catch (error) {
-        debugLog.innerText = `❌ Pose setup error: ${error.message}`;
-        console.error(error);
+        // debugLog.innerText = `❌ Pose setup error: ${error.message}`;
+        // console.error(error);
     }
 }
 
