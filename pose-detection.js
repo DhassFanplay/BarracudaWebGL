@@ -32,17 +32,32 @@ async function initPoseDetection() {
     }
 }
 
+// async function detectPose() {
+//     if (!detector || !video) return;
+
+//     const poses = await detector.estimatePoses(video);
+//     if (poses.length > 0) {
+//         const keypoints = poses[0].keypoints;
+//         const leftAnkle = keypoints.find(k => k.name === "left_ankle");
+//         const rightAnkle = keypoints.find(k => k.name === "right_ankle");
+
+//         if (leftAnkle?.score > 0.5) sendToUnity(leftAnkle.x, leftAnkle.y, "LeftAnkle");
+//         if (rightAnkle?.score > 0.5) sendToUnity(rightAnkle.x, rightAnkle.y, "RightAnkle");
+//     }
+
+//     requestAnimationFrame(detectPose);
+// }
 async function detectPose() {
     if (!detector || !video) return;
 
     const poses = await detector.estimatePoses(video);
     if (poses.length > 0) {
         const keypoints = poses[0].keypoints;
-        const leftAnkle = keypoints.find(k => k.name === "left_ankle");
-        const rightAnkle = keypoints.find(k => k.name === "right_ankle");
+        const leftWrist = keypoints.find(k => k.name === "left_wrist");
+        const rightWrist = keypoints.find(k => k.name === "right_wrist");
 
-        if (leftAnkle?.score > 0.5) sendToUnity(leftAnkle.x, leftAnkle.y, "LeftAnkle");
-        if (rightAnkle?.score > 0.5) sendToUnity(rightAnkle.x, rightAnkle.y, "RightAnkle");
+        if (leftWrist && leftWrist.score > 0.5) sendToUnity(leftWrist.x, leftWrist.y, "LeftWrist");
+        if (rightWrist && rightWrist.score > 0.5) sendToUnity(rightWrist.x, rightWrist.y, "RightWrist");
     }
 
     requestAnimationFrame(detectPose);
